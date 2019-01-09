@@ -39,13 +39,13 @@ def getYDirHelper(N, y0, thresh, iter):
     yDir = y0;
     # Let us do hard assignments
     for i in range(iter):
-        sim0 = np.dot(np.transpose(yDir)*nn)
+        sim0 = np.dot(np.transpose(yDir),nn)
         indF = abs(sim0) > np.rad2deg(np.arccos(thresh))
         indW = abs(sim0) < np.rad2deg(np.arcsin(thresh))
 
         NF = nn[:,indF]
         NW = nn[:,indW]
-        A = np.dot(NW*np.transpose(NW)) - np.dot(NF*np.transpose(NF))
+        A = np.dot(NW,np.transpose(NW)) - np.dot(NF,np.transpose(NF))
         b = np.zeros((3,1))
         c = NF.shape[1]
 
@@ -53,6 +53,6 @@ def getYDirHelper(N, y0, thresh, iter):
         gr = min(np.diag(D))
         ind = np.argmin(np.diag(D))
         newYDir = V[:,ind]
-        yDir = newYDir*np.sign(np.dot(np.transpose(yDir)*newYDir))
+        yDir = newYDir*np.sign(np.dot(np.transpose(yDir),newYDir))
 
     return yDir
