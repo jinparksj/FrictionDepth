@@ -16,7 +16,7 @@ def getRMatrix(yi,yf):
         ax = ax/np.linalg.norm(ax)
         # Find angle of rotation
         # phi = acosd(abs(yi'*yf)) we dont need to take absolute value here
-        phi = np.rad2deg(np.arccos(np.dot(np.transpose(yi)*yf)))
+        phi = np.rad2deg(np.arccos(np.dot(np.transpose(yi),yf)))
 
     if abs(phi) > 0.1:
         # ax = np.cross(yi,yf)
