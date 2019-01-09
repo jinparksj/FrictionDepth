@@ -1,5 +1,5 @@
 import numpy as np
-
+ok
 def getRMatrix(yi,yf):
     # function R = getRMatrix(yi,yf)
     # Generates a rotation matrix that
