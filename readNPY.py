@@ -15,11 +15,15 @@ def readNPY(filename):
 
             data_count = np.prod(shape)
             data = np.fromfile(f, count=data_count, dtype=dataType)
-            data = data.reshape((data_count,))
+            data = data.reshape((data_count, ))
 
             if (len(shape) > 1 and not fortranOrder):
-                data = data.reshape((shape[2], shape[1], shape[0]))
-                data = np.transpose(data, (len(shape) -1, 1, 0))
+                if 'rgb' in filename:
+                    data = data.reshape((shape[2], shape[1], shape[0]))
+                    data = np.transpose(data, (len(shape) -1, 1, 0))
+                elif 'depth' in filename:
+                    data = data.reshape((shape[1], shape[0]))
+                    data = np.transpose(data, (len(shape) -1, 0))
             elif len(shape) > 1:
                 data = data.reshape(shape)
 

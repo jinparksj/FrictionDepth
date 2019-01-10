@@ -2,8 +2,6 @@ import numpy as np
 import re
 
 def readNPYheader(filename):
-    filename = "data/chair_bed_rgb.npy"
-
     with open(filename, 'rb') as f:
         try:
             dtypesPYTHON = np.array(['uint8', 'uint16', 'uint32', 'uint64', 'int8', 'int16', 'int32', 'int64', 'single',
@@ -49,9 +47,14 @@ def readNPYheader(filename):
 
             fortranOrder = (fortran_sub == True)
 
-            r_shape = re.compile(r"shape....(\d+)..(\d+)..(\d+)")
-            shape = r_shape.search(arrayFormat)
-            arrayShape = np.uint(shape.group(1, 2, 3))
+            if 'rgb' in filename:
+                r_shape = re.compile(r"shape....(\d+)..(\d+)..(\d+)")
+                shape = r_shape.search(arrayFormat)
+                arrayShape = np.uint(shape.group(1, 2, 3))
+            elif 'depth' in filename:
+                r_shape = re.compile(r"shape....(\d+)..(\d+)")
+                shape = r_shape.search(arrayFormat)
+                arrayShape = np.uint(shape.group(1, 2))
 
             return arrayShape, dataType, fortranOrder, littleEndian, totalHeaderLength, npyVersion
 
