@@ -1,8 +1,6 @@
 import numpy as np
 import re
 
-
-
 def readNPYheader(filename):
     filename = "data/chair_bed_rgb.npy"
 
@@ -53,13 +51,14 @@ def readNPYheader(filename):
 
             r_shape = re.compile(r"shape....(\d+)..(\d+)..(\d+)")
             shape = r_shape.search(arrayFormat)
-            arrayShape = np.int(shape.group(1, 2, 3))
+            arrayShape = np.uint(shape.group(1, 2, 3))
 
             return arrayShape, dataType, fortranOrder, littleEndian, totalHeaderLength, npyVersion
 
         except:
             f.close()
             print('error')
+            return None
 
 
 
