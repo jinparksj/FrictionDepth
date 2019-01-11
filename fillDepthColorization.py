@@ -15,42 +15,14 @@ import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 from scipy.sparse import linalg
 from scipy import sparse
+from numba import jit
 
 
-
-def fillDepthColorization(imgRgb, imgDepth, alpha=1):
-
-    # Check for potential noise in the depth image
-    imgIsNoise = np.logical_or(imgDepth == 0, imgDepth == 10)
-    maxImgAbsDepth = np.max(imgDepth[~imgIsNoise])
-    imgDepth = imgDepth / maxImgAbsDepth #Normalize
-    imgDepth = np.clip(imgDepth, None, 1) #Double check normalization
-
-    #assert(ismatrix(imgDepth));
-    H = imgDepth.shape[0]
-    W = imgDepth.shape[1]
-
-    nPixels = H * W
-
-    indsM = np.arange(0, nPixels, 1).reshape((H, W), order='F')
-
-    knownValMask = ~imgIsNoise
-
-    grayImg = np.ones((imgRgb.shape[0], imgRgb.shape[1])) #NEED TO CHECK!!!!!!!!!!!!!!!!!!
-
-    winRad = 1
-
-    len = 0
-    absImgNdx = 0
-    cols = np.zeros((nPixels * (2*winRad + 1)**2, ))
-    rows = np.zeros((nPixels * (2*winRad + 1)**2, ))
-    vals = np.zeros((nPixels * (2*winRad + 1)**2, ))
-    gvals = np.zeros(((2 * winRad + 1) ** 2, ))
-
-
+@jit(parallel=True, nogil=True)
+def jitforloop(W, H, absImgNdx, winRad, rows, cols, vals, gvals, indsM, grayImg, len):
     for j in range(W):
         for i in range(H):
-            absImgNdx = absImgNdx + 1
+
 
             nWin = 0 #Count the number of points in the current window
             for ii in np.arange(np.max([0, i - winRad]), np.min([i + winRad, H - 1]) + 1, 1):
@@ -88,37 +60,60 @@ def fillDepthColorization(imgRgb, imgDepth, alpha=1):
             cols[len] = absImgNdx
             vals[len] = 1 #sum(gvals(1:nWin))
             len = len + 1
+            absImgNdx = absImgNdx + 1
+
+
+    return W, H, absImgNdx, winRad, rows, cols, vals, gvals, indsM, grayImg, len
+
+
+
+def fillDepthColorization(imgRgb, imgDepth, alpha=1):
+
+    # Check for potential noise in the depth image
+    imgIsNoise = np.logical_or(imgDepth == 0, imgDepth == 10)
+    maxImgAbsDepth = np.max(imgDepth[~imgIsNoise])
+    imgDepth = imgDepth / maxImgAbsDepth #Normalize
+    imgDepth = np.clip(imgDepth, None, 1) #Double check normalization
+
+    #assert(ismatrix(imgDepth));
+    H = imgDepth.shape[0]
+    W = imgDepth.shape[1]
+
+    nPixels = H * W
+
+    indsM = np.arange(0, nPixels, 1).reshape((H, W), order='F')
+
+    knownValMask = ~imgIsNoise
+
+    grayImg = np.ones((imgRgb.shape[0], imgRgb.shape[1])) #NEED TO CHECK!!!!!!!!!!!!!!!!!!
+
+    winRad = 1
+
+    len = 0
+    absImgNdx = 0
+    cols = np.zeros((nPixels * (2*winRad + 1)**2, ))
+    rows = np.zeros((nPixels * (2*winRad + 1)**2, ))
+    vals = np.zeros((nPixels * (2*winRad + 1)**2, ))
+    gvals = np.zeros(((2 * winRad + 1) ** 2, ))
+
+    #JIT FOR LOOP for Accelerating / NEED TO OPTIMIZE IT
+    W, H, absImgNdx, winRad, rows, cols, vals, gvals, indsM, grayImg, len = jitforloop(W, H, absImgNdx, winRad, rows, cols, vals, gvals, indsM, grayImg, len)
 
     vals = vals[0:len]
     cols = cols[0:len]
     rows = rows[0:len]
 
-    A = csr_matrix((vals, (np.int64(rows), np.int64(cols))), shape = (nPixels, nPixels)).reshape(nPixels, nPixels, order='F')
+    A = csr_matrix((vals, (np.int64(rows), np.int64(cols))), shape = (nPixels, nPixels))
 
     rows = np.arange(0, knownValMask.size, 1)
     cols = np.arange(0, knownValMask.size, 1)
     vals = knownValMask.flatten(order=1) * alpha
-    G = csr_matrix((vals, (np.int64(rows), np.int64(cols))), shape = (nPixels, nPixels)).reshape(nPixels, nPixels, order='F')
+    G = csr_matrix((vals, (np.int64(rows), np.int64(cols))), shape = (nPixels, nPixels))
 
 
-    new_vals = linalg.spsolve((A + G), (vals * imgDepth.flatten(order=1))).reshape((H, W))
-    new_vals = new_vals.reshape((H, W))
+    new_vals = linalg.spsolve((A + G), (vals * imgDepth.flatten(order=1))).reshape(H, W, order='F')
 
     denoisedDepthImg = new_vals * maxImgAbsDepth
-    """
-    matA = np.array([[1, 2, 3], [3, 4, 5]])
-    new_vals = (A + G) \ (vals .* imgDepth(:));
-    new_vals = reshape(new_vals, [H, W]);
-
-    denoisedDepthImg = new_vals * maxImgAbsDepth;
-    """
-
-
-
-
-
-
-
 
 
     return denoisedDepthImg
