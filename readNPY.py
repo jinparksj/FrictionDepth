@@ -19,10 +19,10 @@ def readNPY(filename):
 
             if (len(shape) > 1 and not fortranOrder):
                 if 'rgb' in filename:
-                    data = data.reshape((shape[2], shape[1], shape[0]))
+                    data = data.reshape(shape[2], shape[1], shape[0], order='F')
                     data = np.transpose(data, (len(shape) -1, 1, 0))
                 elif 'depth' in filename:
-                    data = data.reshape((shape[1], shape[0]))
+                    data = data.reshape(shape[1], shape[0], order='F')
                     data = np.transpose(data, (len(shape) -1, 0))
             elif len(shape) > 1:
                 data = data.reshape(shape)
