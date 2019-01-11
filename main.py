@@ -26,6 +26,8 @@ DEPTH_SCALE = 0.0001 # Depth scale used during data recording
 FOCAL = 498.0; # Focal length used during data recording
 CAM_MATRIX = [[FOCAL, 0, 0], [0, FOCAL, 0], [0, 0, 1]] # Camera matrix
 
+#DONE FOR JIN's PART
+#FROM ==============================================
 #load RGB
 filename = 'data/chair_bed_rgb.npy'
 imgBgr = readNPY(filename)
@@ -44,8 +46,15 @@ imgRawDepth = imgRawDepth * DEPTH_SCALE
 
 #Create HHA
 
-imgDenoisedDepth = fillDepthColorization(imgRgb, imgRawDepth, ALPHA)
+# imgDenoisedDepth = fillDepthColorization(imgRgb, imgRawDepth, ALPHA)
 
-HHA = getHAA(CAM_MATRIX, imgDenoisedDepth, imgRawDepth)
+#TO ==============================================
+
+
+#For testing!
+imgDenoisedDepth = np.load('data/testdata.npy')
+
+print('working end')
+# HHA = getHAA(CAM_MATRIX, imgDenoisedDepth, imgRawDepth)
 
 
