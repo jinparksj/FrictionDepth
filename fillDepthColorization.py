@@ -12,16 +12,11 @@ Args:
 """
 
 import numpy as np
+from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse import linalg
+from scipy import sparse
 
-# def rgb2gray(rgb):
-#     R = rgb[:, :, 0]
-#     G = rgb[:, :, 1]
-#     B = rgb[:, :, 2]
-#     Gray = R * 0.2989 + G * 0.587 + B * 0.114
-#     Gray = np.min([np.max([Gray, 0]), 1])
-#     Gray =
-#
-#     return Gray
+
 
 def fillDepthColorization(imgRgb, imgDepth, alpha=1):
 
@@ -47,22 +42,21 @@ def fillDepthColorization(imgRgb, imgDepth, alpha=1):
 
     len = 0
     absImgNdx = 0
-    cols = np.zeros((nPixels * (2*winRad + 1)**2, 1))
-    rows = np.zeros((nPixels * (2*winRad + 1)**2, 1))
-    vals = np.zeros((nPixels * (2*winRad + 1)**2, 1))
-    gvals = np.zeros((1, (2 * winRad + 1) ** 2))
+    cols = np.zeros((nPixels * (2*winRad + 1)**2, ))
+    rows = np.zeros((nPixels * (2*winRad + 1)**2, ))
+    vals = np.zeros((nPixels * (2*winRad + 1)**2, ))
+    gvals = np.zeros(((2 * winRad + 1) ** 2, ))
+
 
     for j in range(W):
         for i in range(H):
             absImgNdx = absImgNdx + 1
 
             nWin = 0 #Count the number of points in the current window
-            for ii in np.arange(np.max([0, i - winRad]), np.min([i + winRad, H]), 1):
-                for jj in np.arange(np.max([0, j - winRad]), np.min([j + winRad, W]), 1):
+            for ii in np.arange(np.max([0, i - winRad]), np.min([i + winRad, H - 1]) + 1, 1):
+                for jj in np.arange(np.max([0, j - winRad]), np.min([j + winRad, W - 1]) + 1, 1):
                     if ii == i and jj == j:
                         continue
-
-                    print(ii, jj)
 
                     rows[len] = absImgNdx
                     cols[len] = indsM[ii, jj]
@@ -73,10 +67,58 @@ def fillDepthColorization(imgRgb, imgDepth, alpha=1):
 
 
             curVal = grayImg[i, j]
-            gvals[nWin + 1] = curVal
-            c_var = np.mean()
+            gvals[nWin] = curVal
+            c_var = np.mean((gvals[0:nWin+1] - np.mean(gvals[0:nWin+1])) ** 2)
+
+            csig = c_var * 0.6
+            mgv = np.min(((gvals[0:nWin] - curVal)) ** 2)
+            if csig < ( -mgv / np.log(0.01)):
+                csig = -mgv / np.log(0.01)
+
+            if csig < 0.000002:
+                csig = 0.000002
+
+            gvals[0:nWin] = np.exp( -(gvals[0:nWin] - curVal) ** 2 / csig)
+            gvals[0:nWin] = gvals[0:nWin] / np.sum(gvals[0:nWin])
+            vals[len-nWin:len] = -gvals[0:nWin]
+
+            #Now the self-reference (along the diagonal)
+
+            rows[len] = absImgNdx
+            cols[len] = absImgNdx
+            vals[len] = 1 #sum(gvals(1:nWin))
+            len = len + 1
+
+    vals = vals[0:len]
+    cols = cols[0:len]
+    rows = rows[0:len]
+
+    A = csr_matrix((vals, (np.int64(rows), np.int64(cols))), shape = (nPixels, nPixels)).reshape(nPixels, nPixels, order='F')
+
+    rows = np.arange(0, knownValMask.size, 1)
+    cols = np.arange(0, knownValMask.size, 1)
+    vals = knownValMask.flatten(order=1) * alpha
+    G = csr_matrix((vals, (np.int64(rows), np.int64(cols))), shape = (nPixels, nPixels)).reshape(nPixels, nPixels, order='F')
+
+
+    new_vals = linalg.spsolve((A + G), (vals * imgDepth.flatten(order=1))).reshape((H, W))
+    new_vals = new_vals.reshape((H, W))
+
+    denoisedDepthImg = new_vals * maxImgAbsDepth
+    """
+    matA = np.array([[1, 2, 3], [3, 4, 5]])
+    new_vals = (A + G) \ (vals .* imgDepth(:));
+    new_vals = reshape(new_vals, [H, W]);
+
+    denoisedDepthImg = new_vals * maxImgAbsDepth;
+    """
 
 
 
 
-    # return denoisedDepthImg
+
+
+
+
+
+    return denoisedDepthImg
