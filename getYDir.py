@@ -36,7 +36,7 @@ def getYDirHelper(N, y0, thresh, iter):
 
     # Set it up as a optimization problem
 
-    yDir = y0;
+    yDir = y0
     # Let us do hard assignments
     for i in range(iter):
         sim0 = np.dot(np.transpose(yDir),nn)
